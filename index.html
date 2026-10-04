@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>名前ダジャレバトル</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e6efff;--ink:#101a44;--pink:#ff3d81;--yel:#ffe14d;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:'Zen Maru Gothic',sans-serif;font-weight:500;
+ padding:calc(16px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+main{max-width:480px;margin:0 auto}
+h1,.big{font-family:'Dela Gothic One',sans-serif;font-weight:400;margin:0}
+h1{font-size:34px;line-height:1.15;margin:8px 0 4px}
+p{margin:6px 0}
+.sub{opacity:.7;font-size:14px}
+.big{font-size:clamp(56px,22vw,96px);line-height:1;text-align:center;margin:18px 0;background:var(--yel);border:3px solid var(--ink);border-radius:18px;padding:22px 8px;box-shadow:6px 6px 0 var(--ink);word-break:keep-all}
+input{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:3px solid var(--ink);border-radius:12px;background:#fff;color:var(--ink);margin:6px 0}
+button{font:inherit;font-weight:700;font-size:18px;width:100%;padding:14px;border:3px solid var(--ink);border-radius:12px;background:var(--pink);color:#fff;box-shadow:4px 4px 0 var(--ink);margin:10px 0}
+button:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+button.ghost{background:#fff;color:var(--ink)}
+button:disabled{opacity:.45}
+input:focus-visible,button:focus-visible{outline:3px solid var(--pink);outline-offset:2px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:2px dashed #b9c6ea;gap:8px}
+.list{background:var(--card);border:3px solid var(--ink);border-radius:14px;margin:10px 0}
+.list .row:last-child{border-bottom:0}
+.tag{font-size:12px;background:var(--ink);color:#fff;border-radius:99px;padding:2px 9px}
+.ok{background:var(--pink)}
+.timer{font-family:'Dela Gothic One';font-size:28px;text-align:right}
+.res{background:var(--card);border:3px solid var(--ink);border-radius:14px;padding:12px;margin:10px 0}
+.res .txt{font-size:18px;margin:4px 0;word-break:break-all}
+.pts{font-family:'Dela Gothic One';font-size:34px;color:var(--pink);line-height:1}
+.br{font-size:13px;opacity:.75}
+.err{color:#c0002e;font-weight:700;min-height:1.3em}
+.hide{display:none}
+
+.av{width:44px;height:44px;border-radius:50%;border:3px solid var(--ink);object-fit:cover;background:var(--yel);display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none;overflow:hidden}
+.av.sm{width:34px;height:34px;font-size:14px}
+.av.lg{width:60px;height:60px;font-size:26px;cursor:pointer}
+.nrow{display:flex;gap:10px;align-items:center;margin:6px 0}
+.nrow input{margin:0}
+.who{display:flex;align-items:center;gap:8px;min-width:0}
+.res{display:flex;gap:10px;align-items:flex-start}
+.res .mid{flex:1;min-width:0}
+</style>
+</head>
+<body>
+<main>
+<section id="s-join">
+  <h1>名前ダジャレバトル</h1>
+  <p class="sub">お題の名前でダジャレを作って、AIに採点してもらおう。丸いアイコンをタップすると、自分の写真に変えられます。</p>
+  <div class="nrow"><label class="av lg" id="avBtn" for="iconFile" title="タップして写真に変更"></label><input id="name" maxlength="10" placeholder="あなたの名前"><input type="file" id="iconFile" accept="image/*" class="hide"></div>
+  <input id="room" maxlength="16" placeholder="ルームコード(例: 1234)">
+  <div class="err" id="err"></div>
+  <button id="btnJoin">部屋に入る</button>
+  <button class="ghost" id="btnSolo">ひとりで特訓</button>
+  <p class="sub" id="srv"></p>
+</section>
+
+<section id="s-lobby" class="hide">
+  <h1>ロビー</h1>
+  <p class="sub">ルームコード: <b id="lcode"></b>(友だちに教えよう)</p>
+  <div class="list" id="lplayers"></div>
+  <button id="btnStart">ゲーム開始(全5ラウンド)</button>
+  <p class="sub" id="waitHost"></p>
+  <button class="ghost" id="btnLeave1">部屋を出る</button>
+</section>
+
+<section id="s-play" class="hide">
+  <div class="row" style="border:0;padding:0"><span id="rinfo" class="sub"></span><span class="timer" id="timer"></span></div>
+  <div class="big" id="oName"></div>
+  <p class="sub">この名前の音を入れたダジャレを作ろう。韻も踏めば高得点。</p>
+  <input id="ans" maxlength="60" placeholder="ダジャレを入力" autocomplete="off">
+  <button id="btnSubmit">送信</button>
+  <div class="list" id="pstate"></div>
+</section>
+
+<section id="s-wait" class="hide"><h1>採点中…</h1><p class="sub">AI審査員が考えています。</p></section>
+
+<section id="s-result" class="hide">
+  <h1 id="rTitle"></h1>
+  <div id="rList"></div>
+  <div id="soloBox" class="hide">
+    <input id="soloName" maxlength="10" placeholder="お題を自分で決める(空欄ならランダム)">
+    <button id="btnSoloNext">次のお題</button>
+    <button class="ghost" id="btnSoloQuit">特訓をやめる</button>
+  </div>
+  <p class="sub" id="rNext"></p>
+  <div class="list" id="rTotals"></div>
+</section>
+
+<section id="s-final" class="hide">
+  <h1>最終結果</h1>
+  <div class="list" id="fList"></div>
+  <button id="btnAgain">もう一度遊ぶ</button>
+  <p class="sub" id="fWait"></p>
+</section>
+</main>
+
+<script>
+// ★デプロイ後、RenderのURLに書き換える(https→wss)
+const NET_SERVER_URL = 'ws://localhost:8080';
+
+const $ = id => document.getElementById(id);
+const SCREENS = ['join','lobby','play','wait','result','final'];
+const show = n => SCREENS.forEach(s => $('s-' + s).classList.toggle('hide', s !== n));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+let isSolo = false, leaving = false, ws, myId = null, hostId = null, players = [], deadline = 0, tick = null, pingT = null, submitted = false;
+$('name').value = localStorage.getItem('dj_name') || '';
+let myIcon = localStorage.getItem('dj_icon') || ''; const icons = {};
+const iconFor = id => (id === 'me' || id === myId) ? myIcon : (icons[id] || '');
+function avatar(id, name, cls) {
+  const src = iconFor(id);
+  if (src) { const i = el('img', 'av ' + (cls || '')); i.src = src; i.alt = ''; return i; }
+  return el('span', 'av ' + (cls || ''), (name || '?').slice(0, 1));
+}
+function renderAvBtn() {
+  const b = $('avBtn'); b.replaceChildren();
+  if (myIcon) { const i = el('img'); i.src = myIcon; i.alt = ''; i.style.cssText = 'width:100%;height:100%;object-fit:cover'; b.append(i); } else b.textContent = '📷';
+}
+async function makeIcon(file) {
+  const bmp = await createImageBitmap(file), c = document.createElement('canvas'); c.width = c.height = 96;
+  const s = Math.min(bmp.width, bmp.height);
+  c.getContext('2d').drawImage(bmp, (bmp.width - s) / 2, (bmp.height - s) / 2, s, s, 0, 0, 96, 96);
+  return c.toDataURL('image/jpeg', 0.7);
+}
+renderAvBtn();
+$('iconFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { myIcon = await makeIcon(f); try { localStorage.setItem('dj_icon', myIcon); } catch (_) {} renderAvBtn(); }
+  catch (_) { $('err').textContent = '画像を読み込めませんでした'; }
+  e.target.value = '';
+};
+$('room').value = localStorage.getItem('dj_room') || '';
+
+function connect(solo) {
+  isSolo = !!solo; leaving = false;
+  const name = $('name').value.trim() || 'ななし', room = $('room').value.trim() || 'LOBBY';
+  localStorage.setItem('dj_name', name); localStorage.setItem('dj_room', room);
+  $('err').textContent = '接続中…(初回は数十秒かかることがあります)'; $('btnJoin').disabled = true;
+  ws = new WebSocket(NET_SERVER_URL);
+  ws.onopen = () => { ws.send(JSON.stringify({ t: 'join', name, room, icon: myIcon })); pingT = setInterval(() => send({ t: 'ping' }), 8000); };
+  ws.onmessage = e => handle(JSON.parse(e.data));
+  ws.onclose = () => { if (leaving) $('err').textContent = ''; clearInterval(pingT); clearInterval(tick); myId = null; show('join'); $('btnJoin').disabled = false; if (!leaving && !$('err').textContent.includes('満員') && !$('err').textContent.includes('進行中')) $('err').textContent = '切断されました。もう一度入ってね'; };
+  ws.onerror = () => { $('err').textContent = 'サーバーに接続できません'; };
+}
+const send = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+
+const NAMES_JP = ['ゆうな','じょうしゃ','さくら','たくみ','ひろし','あかね','けんた','みなと','かえで','りょうた','まさき','なつき','ゆうき','はるか','ひなた','しょうた','あおい','だいすけ','ことね','いくと','かおり','アキタ','たけし','まなぶ','ひとみ','みさき','かずき','けいすけ','ゆうた','りな','ののか','いおり','そうた','はると','れん','ゆいな','みゆ','あやか','さやか','ともき','こうた','しんじ','だいき','まこと','のぞみ','めぐみ','ちひろ','ゆかり','かなた','ひかる','つばさ','あすか','まりこ','えいた','かずま','よしお','たかし','ゆきお','のぶお','みつる','くにお','しずか','いずみ','ちさと','はなこ','たろう','じろう','さぶろう','すぐる','いさお','あつし','まさる','きよし','とおる','ひでき','なおき','かいと','りく','そら','ゆま','みお','ひまり','いちか','こはる','あかり','ゆず','るな','ここな','みつき','おさむ','たいが','げんき','こうき','ゆうと','しゅん','ほのか','めい','ゆあ','れいな','さとし','ともこ','やすし','いさむ','ひろき','みのる','かんな','ふみや','ゆきな','さとる','まゆみ','ひろみ','きよみ','あきら','しょうご','りゅうき','かすみ','ちなつ','みかん','もも','いちご','ひなこ','たまき','とうま','まひろ','あいり','かのん','ゆうせい','けんじ','たけひこ','まさと','ゆうすけ','てるみ','あきこ','かおる','ひさし'];
+const NAMES_WORLD = ['ミカエル','ジョン','マイク','デイビッド','ジェームス','ロバート','ウィリアム','トーマス','ダニエル','マシュー','ケビン','ブライアン','エリック','スティーブ','ポール','マーク','ジェイソン','ライアン','アレックス','ネイサン','オスカー','オリバー','ヘンリー','ジャック','ハリー','チャーリー','ジョージ','アーサー','ノア','リアム','イーサン','ルーク','エマ','オリビア','ソフィア','イザベラ','ミア','アメリア','エミリー','クロエ','リリー','グレース','ソフィー','ジェシカ','サラ','ローラ','ナタリー','ステラ','ルーシー','アリス','ケイト','ジェーン','ルナ','マリア','カルロス','ペドロ','ミゲル','ディエゴ','ルイス','ホセ','ラファエル','アントニオ','ロベルト','パブロ','ハビエル','ルシア','カルメン','イザベル','ジャン','ピエール','ルイ','アンリ','ジャンヌ','ブリジット','クロード','マルセル','ヴィクトル','ハンス','クラウス','フリッツ','ウルリッヒ','ヨハン','ゲルト','マルコ','ルカ','ジョバンニ','ロレンツォ','ジュリア','イワン','ドミトリー','セルゲイ','アレクセイ','ナターシャ','オルガ','ボリス','ニコライ','ミハイル','アンナ','ムハンマド','アリ','ハッサン','ファティマ','ヤスミン','オマール','カリム','ラシード','ラジ','アルジュン','プリヤ','アニル','ラヴィ','サンジェイ','ワン','リー','チェン','ジャッキー','メイ','リン','シャオ','ジホ','ミンジュン','ソヨン','ジウ','ハヌル','ヒョンビン','グエン','ミン','ビョルン','インゲ','ラース','ヨナス','ペール','クワメ','アマニ','ザラ','ジョモ','ニコス','ディミトリ','ヤン','エムレ','ダビデ','カイ','ナオミ'];
+const SURNAMES = ['たけした','たんしょ','たなか','すずき','さとう','たかはし','いとう','わたなべ','やまもと','なかむら','こばやし','かとう','よしだ','やまだ','ささき','やまぐち','まつもと','いのうえ','きむら','はやし','しみず','やまざき','もり','いけだ','はしもと','あべ','いしかわ','やました','なかじま','いしい','おがわ','まえだ','おかだ','はせがわ','ふじた','ごとう','こんどう','むらた','うえだ','さかもと','えんどう','あおき','ふくだ','にしむら','みうら','ふじわら','おかもと','まつだ','なかがわ','なかの','はらだ','おの','たむら','たけうち','かねこ','わだ','なかやま','いしだ','うえの','もりた','はら','しばた','さかい','くどう','よこやま','みやざき','みやもと','うちだ','たかぎ','あんどう','たにぐち','おおの','まるやま','いまい','たかだ','ふじい','たけだ','かねだ','こじま','ほんだ'];
+// 名前の出し方: 海外 1/7 / 日本のうちフルネーム 1/8、苗字だけ 約2割(下の名前より少なめ)、残りは下の名前
+function pickName(used) {
+  const pick = arr => { const f = arr.filter(n => !used.includes(n)); const a = f.length ? f : arr; return a[Math.floor(Math.random() * a.length)]; };
+  if (Math.random() < 1 / 7) return { name: pick(NAMES_WORLD) };
+  const r = Math.random();
+  if (r < 1 / 8) { const s = SURNAMES[Math.floor(Math.random() * SURNAMES.length)], g = NAMES_JP[Math.floor(Math.random() * NAMES_JP.length)]; return { name: s + g, disp: s + ' ' + g, sei: s, mei: g }; }
+  if (r < 1 / 8 + 7 / 8 * 0.2) return { name: pick(SURNAMES) };
+  return { name: pick(NAMES_JP) };
+}
+let soloUsed = [], soloN = 0, soloName = '', soloDisp = '', soloSei = '', soloMei = '';
+function setBig(disp) {
+  $('oName').textContent = disp;
+  const L = Math.max(3, ...disp.split(' ').map(x => x.length));
+  $('oName').style.fontSize = 'min(' + Math.floor(80 / L) + 'vw, 96px)';
+}
+const kata2hira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+function localScore(name, text, parts) {
+  const norm = x => kata2hira(x).replace(/[\s、。,.!?！？「」]/g, ''), t = norm(text), n = norm(name);
+  const cnt = w => { let c = 0, i = -1; while (w && (i = t.indexOf(w, i + 1)) !== -1) c++; return c; };
+  const full = parts && parts[0];
+  const ok = full ? (cnt(n) >= 1 && (cnt(n) >= 2 || cnt(norm(parts[0])) >= 2 || cnt(norm(parts[1])) >= 2)) : cnt(n) >= 2;
+  const kanji = /[一-龠]/.test(text) ? ' 漢字は読めないので、ひらがなで書くと正確です。' : '';
+  const pun = ok ? 40 : 0;
+  return { pun, rhyme: 0, sense: 0, fun: 0, trick: 0, score: pun, simple: true,
+    comment: (ok ? '名前の音が別の意味でも入っています。' : cnt(n) >= 1 ? '名前は入っています。別の意味の同じ音も隠そう。' : '名前が入っていません。') + kanji };
+}
+function soloStart() { isSolo = true; myId = 'me'; soloUsed = []; soloN = 0; soloRound(''); }
+function soloRound(custom) {
+  if (!soloWs) soloConnect();
+  custom = (custom || '').trim().slice(0, 20); soloN++;
+  if (soloUsed.length >= NAMES_JP.length + NAMES_WORLD.length + SURNAMES.length) soloUsed = [];
+  const pk = custom ? { name: custom } : pickName(soloUsed);
+  soloName = pk.name; soloDisp = pk.disp || pk.name; soloSei = pk.sei || ''; soloMei = pk.mei || ''; if (!custom) soloUsed.push(soloName);
+  submitted = false; $('ans').value = ''; $('ans').disabled = false; $('btnSubmit').disabled = false;
+  $('rinfo').textContent = '特訓 ' + soloN + '問目'; $('timer').textContent = ''; setBig(soloDisp);
+  $('pstate').classList.add('hide'); show('play'); $('ans').focus();
+}
+let soloWs = null, soloPending = null;
+function soloConnect() {
+  const set = t => { $('srv').textContent = t; };
+  set('サーバーに接続中…(初回は数十秒かかることがあります)');
+  let w; try { w = soloWs = new WebSocket(NET_SERVER_URL); } catch (e) { soloWs = null; set('サーバー未接続(特訓は簡易採点になります)'); return; }
+  w.onopen = () => set('サーバー接続OK(特訓はAIが精密に採点します)');
+  w.onmessage = e => { try { const m = JSON.parse(e.data); if (m.t === 'judged' && soloPending) soloPending(m.result); } catch (_) {} };
+  w.onclose = w.onerror = () => { if (soloWs === w) soloWs = null; set('サーバー未接続(特訓は簡易採点になります)。再接続を試しています…'); };
+}
+async function soloSubmit(text) {
+  submitted = true; $('ans').disabled = true; $('btnSubmit').disabled = true; show('wait');
+  let r = null;
+  if (soloWs && soloWs.readyState === 1) { // server connected: precise AI scoring
+    r = await new Promise(res => {
+      const t = setTimeout(() => { soloPending = null; res(null); }, 30000);
+      soloPending = x => { clearTimeout(t); soloPending = null; res(x); };
+      soloWs.send(JSON.stringify({ t: 'judge', name: soloName, text, sei: soloSei, mei: soloMei }));
+    });
+  }
+  if (!r) r = localScore(soloName, text, [soloSei, soloMei]); // not connected: simple check
+  showResult({ name: soloName, disp: soloDisp, round: soloN, rounds: 0, results: [Object.assign({ id: 'me', name: $('name').value.trim() || 'あなた', text }, r)] });
+}
+
+function renderPlayers(box, showDone) {
+  box.replaceChildren();
+  players.forEach(p => {
+    const r = el('div', 'row'), l = el('span', 'who');
+    l.append(avatar(p.id, p.name, 'sm'), el('span', '', p.name + (p.id === myId ? '(あなた)' : '') + (p.id === hostId ? ' 👑' : '')));
+    const right = el('span');
+    if (showDone) right.append(el('span', 'tag' + (p.done ? ' ok' : ''), p.done ? '提出済' : '考え中'));
+    else right.append(el('span', 'sub', p.total + '点'));
+    r.append(l, right); box.append(r);
+  });
+}
+
+function handle(m) {
+  switch (m.t) {
+    case 'welcome': myId = m.id; $('lcode').textContent = m.room; $('err').textContent = ''; if (!m.solo) show('lobby'); break;
+    case 'error': $('err').textContent = m.msg; break;
+    case 'room':
+      players = m.players; hostId = m.hostId;
+      renderPlayers($('lplayers'), false); renderPlayers($('pstate'), true);
+      const host = myId === hostId;
+      $('btnStart').classList.toggle('hide', !host); $('btnStart').disabled = players.length < 2;
+      $('waitHost').textContent = host ? (players.length < 2 ? '2人以上そろうと開始できます' : '') : '👑ホストの開始を待っています';
+      $('btnAgain').classList.toggle('hide', !host); $('fWait').textContent = host ? '' : '👑ホストを待っています';
+      renderTotals(); break;
+    case 'icons': Object.assign(icons, m.icons); renderPlayers($('lplayers'), false); renderPlayers($('pstate'), true); renderTotals(); break;
+    case 'lobby': show('lobby'); break;
+    case 'round':
+      submitted = false; $('ans').value = ''; $('ans').disabled = false; $('btnSubmit').disabled = false;
+      $('rinfo').textContent = m.rounds ? 'ラウンド ' + m.round + ' / ' + m.rounds : '特訓 ' + m.round + '問目'; setBig(m.disp || m.name);
+      deadline = Date.now() + m.ms; clearInterval(tick); $('timer').textContent = ''; $('pstate').classList.remove('hide');
+      if (m.ms) tick = setInterval(() => { $('timer').textContent = Math.max(0, Math.ceil((deadline - Date.now()) / 1000)); }, 250);
+      show('play'); $('ans').focus(); break;
+    case 'scoring': clearInterval(tick); show('wait'); break;
+    case 'result': showResult(m); break;
+    case 'final':
+      $('fList').replaceChildren();
+      m.ranking.forEach((p, i) => {
+        const r = el('div', 'row'), l = el('span', 'who'); l.append(el('span', '', i === 0 ? '🏆' : (i + 1) + '位'), avatar(p.id, p.name, 'sm'), el('span', '', p.name + (p.id === myId ? '(あなた)' : '')));
+        r.append(l, el('span', 'pts', p.total + '点'));
+        $('fList').append(r);
+      });
+      show('final'); break;
+  }
+}
+
+function renderTotals() { renderPlayers($('rTotals'), false); }
+
+function showResult(m) {
+  $('rTitle').textContent = '「' + (m.disp || m.name) + '」の結果';
+  $('rList').replaceChildren();
+  m.results.forEach(r => {
+    const c = el('div', 'res'), mid = el('div', 'mid');
+    mid.append(el('b', '', r.name + (r.id === myId ? '(あなた)' : '')), el('div', 'txt', r.text || '(未提出)'));
+    if (isSolo) mid.append(el('div', 'br', r.simple ? '簡易判定(サーバー未接続。名前の音が2回以上入っているかだけ)' : 'ダジャレ ' + r.pun + ' / 韻 ' + r.rhyme + ' / 意味 ' + r.sense + ' / 面白さ ' + r.fun + ' / 救済減点 ' + r.trick));
+    mid.append(el('div', 'br', r.comment));
+    c.append(avatar(r.id, r.name, ''), mid, el('span', 'pts', r.score));
+    $('rList').append(c);
+  });
+  $('soloBox').classList.toggle('hide', !isSolo); $('rTotals').classList.toggle('hide', isSolo); $('soloName').value = '';
+  $('rNext').textContent = isSolo ? '' : (m.round < m.rounds ? 'まもなく次のラウンド…' : 'まもなく最終結果…');
+  show('result');
+}
+
+function submit() {
+  if (submitted) return; const t = $('ans').value.trim(); if (!t) return;
+  if (isSolo) return soloSubmit(t);
+  submitted = true; send({ t: 'submit', text: t }); $('ans').disabled = true; $('btnSubmit').disabled = true;
+}
+
+// 起動時にサーバーへ接続(眠っているRenderを起こす)。切れていたら再接続、つながっている間はping
+soloConnect();
+setInterval(() => { if (!soloWs) soloConnect(); else if (soloWs.readyState === 1) soloWs.send('{"t":"ping"}'); }, 10000);
+$('btnJoin').onclick = () => connect(false);
+$('btnSolo').onclick = soloStart;
+$('btnSoloNext').onclick = () => soloRound($('soloName').value);
+$('btnSoloQuit').onclick = () => { isSolo = false; myId = null; show('join'); };
+$('btnStart').onclick = () => send({ t: 'start' });
+$('btnAgain').onclick = () => send({ t: 'again' });
+$('btnSubmit').onclick = submit;
+$('ans').onkeydown = e => { if (e.key === 'Enter') submit(); };
+$('btnLeave1').onclick = () => { leaving = true; send({ t: 'leave' }); ws.close(); };
+</script>
+</body>
+</html>
