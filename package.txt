@@ -1,0 +1,9 @@
+{
+  "name": "dajare-battle-server",
+  "version": "1.0.0",
+  "description": "Realtime WebSocket server for the name-pun (dajare) battle game, scored by Claude",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.16.0" }
+}
